@@ -1,0 +1,52 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What this repo is
+
+Rising Moon: a full-stack app for hosting Fate RPG (Fate Core / Fate Condensed / Fate Accelerated) tabletop character sheets. Portfolio project, MIT-licensed code, Fate SRD content used under CC BY 3.0 (see README.md for the full attribution/license text — do not remove it).
+
+**Current state: boilerplate/setup only.** There is no backend, database, auth, or app-specific business logic wired up yet — just the Next.js app, the monorepo layout, and tooling (Prettier, ESLint, Vitest, Playwright). Don't assume features described in commit history or past discussion (e.g. Supabase auth, campaign/character schema) exist in the code; check before referencing them.
+
+## Commands
+
+All commands run from the repo root using npm workspaces (`--workspace=web` targets `apps/web`).
+
+```bash
+npm install                          # install all workspaces
+
+npm run dev                          # next dev (apps/web)
+npm run build                        # next build (apps/web)
+npm run lint --workspace=web         # eslint
+
+npm run format                       # prettier --write, repo-wide
+npm run format:check                 # prettier --check, repo-wide
+
+npm run test --workspace=web         # vitest run (unit/component)
+npm run test:watch --workspace=web   # vitest, watch mode
+npm run test:e2e --workspace=web     # playwright test (requires `npx playwright install` first)
+```
+
+Run a single test:
+
+```bash
+npm run test --workspace=web -- src/app/page.test.tsx   # one Vitest file
+npm run test --workspace=web -- -t "renders the home"   # by test name
+npx playwright test e2e/home.spec.ts                     # one Playwright file (from apps/web)
+```
+
+## Architecture
+
+**Monorepo via npm workspaces** (`workspaces: ["apps/*", "packages/*"]` in the root `package.json`):
+
+- `apps/web` — the Next.js 16 App Router app (TypeScript, Tailwind CSS). Currently the only app.
+- `packages/shared-types` — `@rising-moon/shared-types`, an empty scaffold package (`src/index.ts` exports nothing yet). It's wired into `apps/web` as a workspace dependency and listed in `next.config.ts`'s `transpilePackages`, so future shared types (e.g. a chat/roll-message shape, sheet-template schema) can be dropped into it and consumed from `apps/web` without extra config.
+
+Tooling is split root vs. per-app: Prettier and `eslint-config-prettier` live at the repo root and apply across the whole monorepo (single shared `.prettierrc`); ESLint itself, Vitest, and Playwright are configured per-app in `apps/web` since it's currently the only lintable/testable workspace.
+
+**Testing setup** (`apps/web`):
+
+- Vitest (`vitest.config.mts`) runs in `jsdom`, with `vite-tsconfig-paths` resolving the `@/*` alias and `vitest.setup.ts` loading `@testing-library/jest-dom/vitest` matchers. Vitest does not support `async` Server Components (a Next.js limitation) — use Playwright for anything async-Server-Component-shaped.
+- Playwright (`playwright.config.ts`) builds and starts the app in production mode (`npm run build && npm run start`) rather than using the dev server, per Next.js's own recommendation for e2e.
+
+**Next.js 16 gotcha**: this app runs Next 16, where `middleware.ts` was renamed to `proxy.ts` (exported function `proxy`, not `middleware`) — relevant the moment auth/session or request-interception logic gets added. The installed Next package ships its own version-specific docs at `node_modules/next/dist/docs/` (hoisted to the workspace root, not `apps/web/node_modules`) — check there before assuming an App Router convention matches older Next.js knowledge.
