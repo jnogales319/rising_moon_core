@@ -24,8 +24,14 @@ yarn-error.log*
 
 # Editor/OS
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
 .idea/
+
+# Claude Code - settings.local.json is per-machine permissions/prefs;
+# a shared settings.json (if one gets added later) would stay tracked.
+.claude/*
+!.claude/settings.json
 
 # TypeScript
 *.tsbuildinfo
