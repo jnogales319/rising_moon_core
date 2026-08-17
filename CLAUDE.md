@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rising Moon: a full-stack app for hosting Fate RPG (Fate Core / Fate Condensed / Fate Accelerated) tabletop character sheets. Portfolio project, MIT-licensed code, Fate SRD content used under CC BY 3.0 (see README.md for the full attribution/license text — do not remove it).
 
-**Current state: boilerplate/setup only.** There is no backend, database, auth, or app-specific business logic wired up yet — just the Next.js app, the monorepo layout, and tooling (Prettier, ESLint, Vitest, Playwright). Don't assume features described in commit history or past discussion (e.g. Supabase auth, campaign/character schema) exist in the code; check before referencing them.
+**Current state: boilerplate/setup only.** There is no database, auth, or app-specific business logic wired up yet — just the Next.js app, the monorepo layout, tooling (Prettier, ESLint, Vitest, Playwright), and a local Supabase dev stack (`supabase/`, see below) that the app doesn't consume yet. Don't assume features described in commit history or past discussion (e.g. Supabase client wiring, campaign/character schema) exist in the code; check before referencing them.
 
 ## Commands
 
@@ -26,6 +26,18 @@ npm run test --workspace=web         # vitest run (unit/component)
 npm run test:watch --workspace=web   # vitest, watch mode
 npm run test:e2e --workspace=web     # playwright test (requires `npx playwright install` first)
 ```
+
+### Local Supabase
+
+Requires Docker running locally. The Supabase CLI is a root devDependency (`supabase` package), so `npm run supabase:*` scripts resolve it from `node_modules/.bin` — no global install needed.
+
+```bash
+npm run supabase:start   # boots the local stack (Postgres, GoTrue, Realtime, Studio) via Docker
+npm run supabase:stop    # tears it down
+npm run supabase:reset   # drops and recreates the local DB, replaying supabase/migrations/ and supabase/seed.sql
+```
+
+`supabase start` prints the local API URL, anon key, service role key, and Studio URL — copy `apps/web/.env.local.example` to `apps/web/.env.local` and fill those in. Migrations live in `supabase/migrations/`; auth config (password policy, etc.) is in `supabase/config.toml`.
 
 Run a single test:
 

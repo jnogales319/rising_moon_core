@@ -15,11 +15,15 @@
     "lint": "npm run lint --workspace=web",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "husky"
+    "prepare": "husky",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset"
   },
   "devDependencies": {
     "eslint-config-prettier": "^10.1.8",
     "husky": "^9.1.7",
-    "prettier": "^3.9.6"
+    "prettier": "^3.9.6",
+    "supabase": "^2.114.0"
   }
 }
