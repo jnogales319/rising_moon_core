@@ -16,4 +16,7 @@ test("supabase smoke test page wires up both clients", async ({ page }) => {
   await expect(page.getByTestId("client-status")).toHaveText(
     /Browser client: (connected|error)/,
   );
+  await expect(page.getByTestId("server-profile")).toHaveText(
+    /Profile: (no user|no profile row|display_name: .*|error: .*)/,
+  );
 });
