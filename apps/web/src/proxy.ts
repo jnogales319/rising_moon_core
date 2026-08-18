@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getGuardRedirect } from "@/lib/route-guard";
 
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -60,7 +61,27 @@ export async function proxy(request: NextRequest) {
 
   // getUser() (not getSession()) revalidates with the Auth server, which is
   // what actually triggers a token refresh and a rewritten cookie.
-  await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getUser();
+  // An AuthSessionMissingError just means there's no logged-in user — that's
+  // expected, not a failure (same convention as supabase-smoke-test).
+  if (error && error.name !== "AuthSessionMissingError") {
+    console.error("proxy auth check failed:", error);
+  }
+  const isAuthenticated = !error && !!data.user;
+
+  const redirectPath = getGuardRedirect(
+    request.nextUrl.pathname,
+    isAuthenticated,
+  );
+  if (redirectPath) {
+    const redirectResponse = NextResponse.redirect(
+      new URL(redirectPath, request.url),
+    );
+    response.cookies.getAll().forEach((cookie) => {
+      redirectResponse.cookies.set(cookie);
+    });
+    return redirectResponse;
+  }
 
   return response;
 }
