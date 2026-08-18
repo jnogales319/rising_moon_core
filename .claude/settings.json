@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c);process.stdin.on(\"end\",()=>{let i;try{i=JSON.parse(d)}catch(e){process.exit(0)}const cmd=(i.tool_input&&i.tool_input.command)||\"\";if(!/(^|[;&|\\s])git\\s+commit(\\s|$)/.test(cmd))process.exit(0);const{execSync}=require(\"child_process\");let b=\"\";try{b=execSync(\"git rev-parse --abbrev-ref HEAD\",{encoding:\"utf8\"}).trim()}catch(e){process.exit(0)}if(b!==\"master\"&&b!==\"main\")process.exit(0);console.log(JSON.stringify({hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:`Commits directly on ${b} are blocked in this repo. Create a new branch first (e.g. git checkout -b <name>), then commit there.`}}))})'"
+            "command": "node -e 'let d=\"\";process.stdin.on(\"data\",c=>d+=c);process.stdin.on(\"end\",()=>{let i;try{i=JSON.parse(d)}catch(e){process.exit(0)}const cmd=(i.tool_input&&i.tool_input.command)||\"\";if(!/\\bgit\\s+commit(\\s|$)/.test(cmd))process.exit(0);const{execSync}=require(\"child_process\");let b=\"\";try{b=execSync(\"git rev-parse --abbrev-ref HEAD\",{encoding:\"utf8\"}).trim()}catch(e){process.exit(0)}if(b!==\"master\"&&b!==\"main\")process.exit(0);console.log(JSON.stringify({hookSpecificOutput:{hookEventName:\"PreToolUse\",permissionDecision:\"deny\",permissionDecisionReason:`Commits directly on ${b} are blocked in this repo. Create a new branch first (e.g. git checkout -b <name>), then commit there.`}}))})'"
           }
         ]
       }
