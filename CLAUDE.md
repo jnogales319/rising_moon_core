@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rising Moon: a full-stack app for hosting Fate RPG (Fate Core / Fate Condensed / Fate Accelerated) tabletop character sheets. Portfolio project, MIT-licensed code, Fate SRD content used under CC BY 3.0 (see README.md for the full attribution/license text — do not remove it).
 
-**Current state: boilerplate/setup only.** There is no database, auth, or app-specific business logic wired up yet — just the Next.js app, the monorepo layout, tooling (Prettier, ESLint, Vitest, Playwright), and a local Supabase dev stack (`supabase/`, see below) that the app doesn't consume yet. Don't assume features described in commit history or past discussion (e.g. Supabase client wiring, campaign/character schema) exist in the code; check before referencing them.
+**Current state: boilerplate + Supabase client plumbing, no auth UI yet.** The Next.js app, monorepo layout, tooling (Prettier, ESLint, Vitest, Playwright), and a local Supabase dev stack (`supabase/`, see below) are in place. `apps/web/src/lib/supabase/client.ts` and `server.ts` (browser/server client factories) and `apps/web/src/proxy.ts` (session-cookie refresh) wire the app up to that local stack — see `/supabase-smoke-test` for a live sanity check. There is still no `profiles` table/RLS (#4), no login/registration UI (#6/#7), and no app-specific business logic (campaign/character schema). Don't assume those exist in the code; check before referencing them.
 
 ## Commands
 
