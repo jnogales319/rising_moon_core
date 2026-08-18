@@ -58,7 +58,7 @@ Tooling is split root vs. per-app: Prettier and `eslint-config-prettier` live at
 
 **Testing setup** (`apps/web`):
 
-- Vitest (`vitest.config.mts`) runs in `jsdom`, with `vite-tsconfig-paths` resolving the `@/*` alias and `vitest.setup.ts` loading `@testing-library/jest-dom/vitest` matchers. Vitest does not support `async` Server Components (a Next.js limitation) — use Playwright for anything async-Server-Component-shaped.
+- Vitest (`vitest.config.mts`) runs in `jsdom`, with Vite's native `resolve.tsconfigPaths` option resolving the `@/*` alias and `vitest.setup.ts` loading `@testing-library/jest-dom/vitest` matchers. Vitest does not support `async` Server Components (a Next.js limitation) — use Playwright for anything async-Server-Component-shaped.
 - Playwright (`playwright.config.ts`) builds and starts the app in production mode (`npm run build && npm run start`) rather than using the dev server, per Next.js's own recommendation for e2e.
 
 **Next.js 16 gotcha**: this app runs Next 16, where `middleware.ts` was renamed to `proxy.ts` (exported function `proxy`, not `middleware`) — relevant the moment auth/session or request-interception logic gets added. The installed Next package ships its own version-specific docs at `node_modules/next/dist/docs/` (hoisted to the workspace root, not `apps/web/node_modules`) — check there before assuming an App Router convention matches older Next.js knowledge.
