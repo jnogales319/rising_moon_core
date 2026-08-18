@@ -37,3 +37,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run test:e2e --workspace=web
+        env:
+          # No live Supabase instance in CI (see e2e/supabase-smoke-test.spec.ts).
+          # These just need to be present and unreachable so proxy.ts's route
+          # guard actually runs instead of short-circuiting — a failed auth
+          # check is treated as "not authenticated", which is what
+          # dashboard-guard.spec.ts exercises.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
