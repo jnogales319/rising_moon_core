@@ -21,7 +21,7 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint --workspace=web
-      - run: npm run test --workspace=web
+      - run: npm run test:coverage --workspace=web
       - run: npm run build
 
   e2e:
