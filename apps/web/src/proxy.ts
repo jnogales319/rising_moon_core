@@ -23,13 +23,15 @@ export async function proxy(request: NextRequest) {
   // cookie-clearing pass followed by a session-refresh write). Each call
   // below rebuilds `response` from a fresh NextResponse.next({ request })
   // so downstream rendering sees the updated request cookies, which would
-  // otherwise silently drop any cookie set by an earlier call — so every
-  // cookie ever passed to setAll is replayed onto each rebuilt response.
+  // otherwise silently drop any cookie or header set by an earlier call — so
+  // every cookie and header ever passed to setAll is replayed onto each
+  // rebuilt response.
   const pendingCookies: {
     name: string;
     value: string;
     options: CookieOptions;
   }[] = [];
+  const pendingHeaders = new Map<string, string>();
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
@@ -41,12 +43,15 @@ export async function proxy(request: NextRequest) {
           request.cookies.set(name, value),
         );
         pendingCookies.push(...cookiesToSet);
+        Object.entries(headers).forEach(([key, value]) =>
+          pendingHeaders.set(key, value),
+        );
 
         response = NextResponse.next({ request });
         pendingCookies.forEach(({ name, value, options }) =>
           response.cookies.set(name, value, options),
         );
-        Object.entries(headers).forEach(([key, value]) =>
+        pendingHeaders.forEach((value, key) =>
           response.headers.set(key, value),
         );
       },
