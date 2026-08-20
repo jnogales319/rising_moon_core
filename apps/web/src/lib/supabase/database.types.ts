@@ -57,7 +57,7 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      is_display_name_available: { Args: { name: string }; Returns: boolean };
     };
     Enums: {
       [_ in never]: never;
