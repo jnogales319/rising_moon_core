@@ -26,9 +26,6 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
-      options: --ipc=host
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -36,12 +33,21 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      # Runs on the bare runner (not in a container) specifically so Docker
+      # is available natively for this — no docker-outside-of-docker needed.
+      - run: npm run supabase:start
+      # NEXT_PUBLIC_* vars are baked in at `next build` time (part of
+      # test:e2e's webServer), so they must land in $GITHUB_ENV before that
+      # step runs, not passed as step-local env.
+      - name: Export Supabase env vars
+        run: |
+          npx supabase status -o env \
+            --override-name api.url=NEXT_PUBLIC_SUPABASE_URL \
+            --override-name auth.anon_key=NEXT_PUBLIC_SUPABASE_ANON_KEY \
+            | grep -E '^(NEXT_PUBLIC_SUPABASE_URL|NEXT_PUBLIC_SUPABASE_ANON_KEY)=' \
+            | tr -d '"' >> "$GITHUB_ENV"
       - run: npm run test:e2e --workspace=web
-        env:
-          # No live Supabase instance in CI (see e2e/supabase-smoke-test.spec.ts).
-          # These just need to be present and unreachable so proxy.ts's route
-          # guard actually runs instead of short-circuiting — a failed auth
-          # check is treated as "not authenticated", which is what
-          # dashboard-guard.spec.ts exercises.
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      - if: always()
+        run: npm run supabase:stop
