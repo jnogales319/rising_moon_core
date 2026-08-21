@@ -120,6 +120,12 @@ test("an already-authenticated visit to /login redirects to the dashboard", asyn
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
+test("links to the registration page", async ({ page }) => {
+  await page.goto("/login");
+  await page.getByRole("link", { name: "Sign up" }).click();
+  await expect(page).toHaveURL(/\/register$/);
+});
+
 test("login page has no automatically detectable accessibility issues", async ({
   page,
 }) => {

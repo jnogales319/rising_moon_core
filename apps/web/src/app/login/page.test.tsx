@@ -72,3 +72,11 @@ test("a login error shows GoTrue's own message and does not redirect", async () 
   ).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
 });
+
+test("links to the registration page", () => {
+  render(<Login />);
+  expect(screen.getByRole("link", { name: "Sign up" })).toHaveAttribute(
+    "href",
+    "/register",
+  );
+});

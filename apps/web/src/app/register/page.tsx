@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const DEBOUNCE_MS = 500;
@@ -212,6 +213,13 @@ export default function Register() {
           Create account
         </button>
       </form>
+
+      <p className="text-sm text-gray-600">
+        Already have an account?{" "}
+        <Link href="/login" className="underline hover:text-gray-900">
+          Log in
+        </Link>
+      </p>
     </main>
   );
 }
