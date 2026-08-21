@@ -250,6 +250,14 @@ test("an availability-check rejection during the live debounced check clears the
   expect(screen.queryByText("Checking availability…")).not.toBeInTheDocument();
 });
 
+test("links to the login page", () => {
+  render(<Register />);
+  expect(screen.getByRole("link", { name: "Log in" })).toHaveAttribute(
+    "href",
+    "/login",
+  );
+});
+
 test("an out-of-order (stale) response does not overwrite the status for the latest value", async () => {
   const first = deferred<{ data: boolean; error: null }>();
   const second = deferred<{ data: boolean; error: null }>();

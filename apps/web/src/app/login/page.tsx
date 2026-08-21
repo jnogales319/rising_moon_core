@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const inputClassName =
@@ -71,6 +72,13 @@ export default function Login() {
           Log in
         </button>
       </form>
+
+      <p className="text-sm text-gray-600">
+        Need an account?{" "}
+        <Link href="/register" className="underline hover:text-gray-900">
+          Sign up
+        </Link>
+      </p>
     </main>
   );
 }
