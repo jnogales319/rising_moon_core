@@ -40,3 +40,4 @@ yarn-error.log*
 coverage/
 apps/web/playwright-report/
 apps/web/test-results/
+test-results/
