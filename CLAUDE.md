@@ -47,6 +47,18 @@ npm run test --workspace=web -- -t "renders the home"   # by test name
 npx playwright test e2e/home.spec.ts                     # one Playwright file (from apps/web)
 ```
 
+## Development workflow
+
+For each work item (a GitHub issue, a bug, etc.), follow this sequence:
+
+1. Check out a new branch for the work item off `master` (naming convention: `feature/<slug>-issue-<n>` or `fix/<slug>-issue-<n>`, matching existing branch history).
+2. Draft a plan and get it approved before writing code:
+   a. Following TDD, write the tests first and present them for approval before implementing.
+   b. Implement the change and present it for approval.
+   c. Run `/code-review` and present the findings.
+   d. Prompt the user to run `/clear`, then propose a commit structure.
+3. When proposing a commit structure, keep each commit's tests together with the source changes they test — never split a change from its own test coverage across commits.
+
 ## Architecture
 
 **Monorepo via npm workspaces** (`workspaces: ["apps/*", "packages/*"]` in the root `package.json`):
