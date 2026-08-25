@@ -80,6 +80,9 @@ export async function proxy(request: NextRequest) {
     response.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie);
     });
+    response.headers.forEach((value, key) => {
+      redirectResponse.headers.set(key, value);
+    });
     return redirectResponse;
   }
 
