@@ -11,7 +11,7 @@ export default function License() {
         code. No Evil Hat trademarks, logos, or official artwork are used; all
         visual design is original.
       </p>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted">
         This is an unofficial fan tool for the Fate system, used under the Fate
         SRD license. Not affiliated with or endorsed by Evil Hat Productions.
       </p>

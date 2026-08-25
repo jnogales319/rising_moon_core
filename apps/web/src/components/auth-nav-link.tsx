@@ -37,7 +37,7 @@ export default function AuthNavLink({
           type="button"
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="cursor-pointer text-sm text-gray-600 underline hover:text-gray-900 disabled:cursor-default disabled:opacity-60"
+          className="cursor-pointer text-sm text-muted underline hover:text-foreground disabled:cursor-default disabled:opacity-60"
         >
           Log out
         </button>
