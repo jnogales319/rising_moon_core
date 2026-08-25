@@ -4,6 +4,7 @@ import Login from "./page";
 
 const signInWithPassword = vi.fn();
 const push = vi.fn();
+const refresh = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -12,12 +13,13 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, refresh }),
 }));
 
 beforeEach(() => {
   signInWithPassword.mockReset();
   push.mockReset();
+  refresh.mockReset();
 });
 
 afterEach(() => {
@@ -57,6 +59,7 @@ test("a successful login calls signInWithPassword and redirects to the dashboard
     email: "nightowl@example.com",
     password: "Sup3r$ecret1",
   });
+  expect(refresh).toHaveBeenCalled();
 });
 
 test("a login error shows GoTrue's own message and does not redirect", async () => {
@@ -71,6 +74,7 @@ test("a login error shows GoTrue's own message and does not redirect", async () 
     await screen.findByText("Invalid login credentials"),
   ).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
+  expect(refresh).not.toHaveBeenCalled();
 });
 
 test("links to the registration page", () => {
