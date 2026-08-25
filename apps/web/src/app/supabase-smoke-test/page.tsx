@@ -54,7 +54,9 @@ export default async function SupabaseSmokeTestPage() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-      <h1 className="text-3xl font-semibold">Supabase Smoke Test</h1>
+      <h1 className="font-display text-4xl font-semibold">
+        Supabase Smoke Test
+      </h1>
       <p data-testid="server-status">Server client: {serverStatus}</p>
       <p data-testid="server-profile">Profile: {serverProfile}</p>
       <SupabaseClientStatus />

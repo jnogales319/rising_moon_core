@@ -124,7 +124,9 @@ export default function Register() {
   if (submitted) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-3xl font-semibold">Check your email</h1>
+        <h1 className="font-display text-4xl font-semibold">
+          Check your email
+        </h1>
         <p>Check your email to confirm your account.</p>
       </main>
     );
@@ -134,7 +136,7 @@ export default function Register() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-      <h1 className="text-3xl font-semibold">Create account</h1>
+      <h1 className="font-display text-4xl font-semibold">Create account</h1>
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
