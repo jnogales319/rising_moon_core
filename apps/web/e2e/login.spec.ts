@@ -122,7 +122,7 @@ test("an already-authenticated visit to /login redirects to the dashboard", asyn
 
 test("links to the registration page", async ({ page }) => {
   await page.goto("/login");
-  await page.getByRole("link", { name: "Sign up" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Sign up" }).click();
   await expect(page).toHaveURL(/\/register$/);
 });
 
