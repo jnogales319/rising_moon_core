@@ -131,7 +131,7 @@ test("a password missing required character classes shows GoTrue's weak-password
 
 test("links to the login page", async ({ page }) => {
   await page.goto("/register");
-  await page.getByRole("link", { name: "Log in" }).click();
+  await page.getByRole("main").getByRole("link", { name: "Log in" }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
 

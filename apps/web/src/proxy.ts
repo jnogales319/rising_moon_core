@@ -83,6 +83,22 @@ export async function proxy(request: NextRequest) {
     return redirectResponse;
   }
 
+  // Forward the already-verified user onto the request so a Server Component
+  // (e.g. SiteHeader) can read it via next/headers' headers() instead of
+  // making its own getUser() round trip to the Auth server for every render.
+  const requestHeaders = new Headers(request.headers);
+  if (isAuthenticated && data.user) {
+    requestHeaders.set("x-supabase-user-id", data.user.id);
+    if (data.user.email) {
+      requestHeaders.set("x-supabase-user-email", data.user.email);
+    }
+  }
+  response = NextResponse.next({ request: { headers: requestHeaders } });
+  pendingCookies.forEach(({ name, value, options }) =>
+    response.cookies.set(name, value, options),
+  );
+  pendingHeaders.forEach((value, key) => response.headers.set(key, value));
+
   return response;
 }
 

@@ -123,7 +123,7 @@ export default function Register() {
 
   if (submitted) {
     return (
-      <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-6 text-center">
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
         <h1 className="text-3xl font-semibold">Check your email</h1>
         <p>Check your email to confirm your account.</p>
       </main>
@@ -133,7 +133,7 @@ export default function Register() {
   const displayNameTaken = checkStatus === "taken";
 
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-4 p-6">
+    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
       <h1 className="text-3xl font-semibold">Create account</h1>
       <form
         onSubmit={handleSubmit}

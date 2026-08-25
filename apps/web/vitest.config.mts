@@ -18,6 +18,7 @@ export default defineConfig({
         "src/proxy.ts",
         "src/app/layout.tsx",
         "src/app/supabase-smoke-test/**",
+        "src/components/site-header.tsx",
       ],
       thresholds: {
         statements: 80,
