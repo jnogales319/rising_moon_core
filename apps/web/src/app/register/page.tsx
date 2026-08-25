@@ -8,7 +8,7 @@ const DEBOUNCE_MS = 500;
 const DISPLAY_NAME_STATUS_ID = "display-name-status";
 
 const inputClassName =
-  "rounded-md border border-gray-300 px-3 py-2 text-base focus:border-gray-500 focus:outline-none";
+  "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
 
 type DisplayNameCheck = {
   name: string;
@@ -124,7 +124,9 @@ export default function Register() {
   if (submitted) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
-        <h1 className="text-3xl font-semibold">Check your email</h1>
+        <h1 className="font-display text-4xl font-semibold">
+          Check your email
+        </h1>
         <p>Check your email to confirm your account.</p>
       </main>
     );
@@ -134,7 +136,7 @@ export default function Register() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-      <h1 className="text-3xl font-semibold">Create account</h1>
+      <h1 className="font-display text-4xl font-semibold">Create account</h1>
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
@@ -156,7 +158,7 @@ export default function Register() {
           <p
             id={DISPLAY_NAME_STATUS_ID}
             aria-live="polite"
-            className={`text-sm ${checkStatus === "taken" ? "text-red-600" : "text-gray-600"}`}
+            className={`text-sm ${checkStatus === "taken" ? "text-danger" : "text-muted"}`}
           >
             {checkStatus === "checking" && "Checking availability…"}
             {checkStatus === "taken" && "That display name is taken."}
@@ -202,21 +204,21 @@ export default function Register() {
         </div>
 
         {passwordMismatchError && (
-          <p className="text-sm text-red-600">{passwordMismatchError}</p>
+          <p className="text-sm text-danger">{passwordMismatchError}</p>
         )}
-        {signUpError && <p className="text-sm text-red-600">{signUpError}</p>}
+        {signUpError && <p className="text-sm text-danger">{signUpError}</p>}
 
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700"
+          className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
         >
           Create account
         </button>
       </form>
 
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted">
         Already have an account?{" "}
-        <Link href="/login" className="underline hover:text-gray-900">
+        <Link href="/login" className="underline hover:text-foreground">
           Log in
         </Link>
       </p>

@@ -1,7 +1,7 @@
 export default function License() {
   return (
     <main className="mx-auto flex max-w-2xl flex-1 flex-col gap-6 p-6">
-      <h1 className="text-2xl font-semibold">License</h1>
+      <h1 className="font-display text-3xl font-semibold">License</h1>
       <p>Code in this repository is licensed under the MIT License.</p>
       <p>
         This project uses the Fate system under the Fate SRD, licensed under the
@@ -11,7 +11,7 @@ export default function License() {
         code. No Evil Hat trademarks, logos, or official artwork are used; all
         visual design is original.
       </p>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted">
         This is an unofficial fan tool for the Fate system, used under the Fate
         SRD license. Not affiliated with or endorsed by Evil Hat Productions.
       </p>

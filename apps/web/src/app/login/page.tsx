@@ -6,7 +6,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 const inputClassName =
-  "rounded-md border border-gray-300 px-3 py-2 text-base focus:border-gray-500 focus:outline-none";
+  "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
 
 export default function Login() {
   const router = useRouter();
@@ -34,7 +34,7 @@ export default function Login() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-      <h1 className="text-3xl font-semibold">Log in</h1>
+      <h1 className="font-display text-4xl font-semibold">Log in</h1>
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
@@ -63,19 +63,19 @@ export default function Login() {
           />
         </div>
 
-        {loginError && <p className="text-sm text-red-600">{loginError}</p>}
+        {loginError && <p className="text-sm text-danger">{loginError}</p>}
 
         <button
           type="submit"
-          className="rounded-md bg-gray-900 px-4 py-2 font-medium text-white hover:bg-gray-700"
+          className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
         >
           Log in
         </button>
       </form>
 
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-muted">
         Need an account?{" "}
-        <Link href="/register" className="underline hover:text-gray-900">
+        <Link href="/register" className="underline hover:text-foreground">
           Sign up
         </Link>
       </p>

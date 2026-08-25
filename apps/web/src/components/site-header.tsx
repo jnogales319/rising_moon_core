@@ -33,7 +33,7 @@ export default async function SiteHeader() {
   }
 
   return (
-    <header className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+    <header className="flex items-center justify-between border-b-2 border-accent/70 px-6 py-4">
       <Link href="/" className="font-semibold">
         Rising Moon
       </Link>
