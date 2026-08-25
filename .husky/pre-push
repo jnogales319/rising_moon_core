@@ -9,4 +9,4 @@ done
 
 npm run format:check
 npm run lint --workspace=web
-npm run test --workspace=web
+npm run test:coverage --workspace=web
