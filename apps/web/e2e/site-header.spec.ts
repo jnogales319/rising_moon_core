@@ -111,3 +111,27 @@ test("logged-in header has no automatically detectable accessibility issues", as
   const results = await new AxeBuilder({ page }).analyze();
   expect(results.violations).toEqual([]);
 });
+
+test("logging out clears the session, redirects to /login, and updates the header", async ({
+  page,
+  id,
+}) => {
+  const email = `logout-${id}@example.com`;
+  const displayName = `LogoutOwl-${id}`;
+  await seedUser({ email, displayName });
+  await establishSessionViaMagicLink(page, email);
+
+  const header = page.getByRole("banner");
+  await header.getByRole("button", { name: "Log out" }).click();
+
+  await expect(page).toHaveURL(/\/login$/);
+  await expect(header.getByText(displayName)).toHaveCount(0);
+
+  await page.goto("/");
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: "Log in" }),
+  ).toBeVisible();
+
+  await page.goto("/dashboard");
+  await expect(page).toHaveURL(/\/login$/);
+});

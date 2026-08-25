@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Rising Moon: a full-stack app for hosting Fate RPG (Fate Core / Fate Condensed / Fate Accelerated) tabletop character sheets. Portfolio project, MIT-licensed code, Fate SRD content used under CC BY 3.0 (see README.md for the full attribution/license text — do not remove it).
 
-**Current state: boilerplate + Supabase client plumbing + registration, no login UI yet.** The Next.js app, monorepo layout, tooling (Prettier, ESLint, Vitest, Playwright), and a local Supabase dev stack (`supabase/`, see below) are in place. `apps/web/src/lib/supabase/client.ts` and `server.ts` (browser/server client factories) and `apps/web/src/proxy.ts` (session-cookie refresh) wire the app up to that local stack — see `/supabase-smoke-test` for a live sanity check. A `profiles` table with RLS (#4) exists, with a `unique(display_name)` constraint and an `is_display_name_available` RPC. `/register` (#6) is implemented — email confirmations are required (`enable_confirmations = true`), so signup no longer produces a live session; a confirm-callback (#30) and login (#7) don't exist yet, so there's currently no way to actually complete a signup and reach an authenticated session. There is still no app-specific business logic (campaign/character schema). Don't assume those exist in the code; check before referencing them.
+**Current state: boilerplate + Supabase client plumbing + registration + login + sitewide header, no logout yet.** The Next.js app, monorepo layout, tooling (Prettier, ESLint, Vitest, Playwright), and a local Supabase dev stack (`supabase/`, see below) are in place. `apps/web/src/lib/supabase/client.ts` and `server.ts` (browser/server client factories) and `apps/web/src/proxy.ts` (session-cookie refresh, and forwarding the verified user's id/email to Server Components via headers) wire the app up to that local stack — see `/supabase-smoke-test` for a live sanity check. A `profiles` table with RLS (#4) exists, with a `unique(display_name)` constraint and an `is_display_name_available` RPC. `/register` (#6) and `/login` (#7) are implemented, with an email confirmation callback route (#30) completing the signup flow, so a full register → confirm → log in path works end to end. A sitewide header (#26) renders on every page via the root layout, showing the logged-in user's display name or a `/login` link. There is no logout (#8) or password reset (#9) yet, and still no app-specific business logic (campaign/character schema). Don't assume those exist in the code; check before referencing them.
 
 ## Commands
 
@@ -46,6 +46,18 @@ npm run test --workspace=web -- src/app/page.test.tsx   # one Vitest file
 npm run test --workspace=web -- -t "renders the home"   # by test name
 npx playwright test e2e/home.spec.ts                     # one Playwright file (from apps/web)
 ```
+
+## Development workflow
+
+For each work item (a GitHub issue, a bug, etc.), follow this sequence:
+
+1. Check out a new branch for the work item off `master` (naming convention: `feature/<slug>-issue-<n>` or `fix/<slug>-issue-<n>`, matching existing branch history).
+2. Draft a plan and get it approved before writing code:
+   a. Following TDD, write the tests first and present them for approval before implementing.
+   b. Implement the change and present it for approval.
+   c. Run `/code-review` and present the findings.
+   d. Prompt the user to run `/clear`, then propose a commit structure.
+3. When proposing a commit structure, keep each commit's tests together with the source changes they test — never split a change from its own test coverage across commits.
 
 ## Architecture
 
