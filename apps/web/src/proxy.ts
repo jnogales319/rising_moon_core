@@ -80,6 +80,14 @@ export async function proxy(request: NextRequest) {
     response.cookies.getAll().forEach((cookie) => {
       redirectResponse.cookies.set(cookie);
     });
+    // Copy from pendingHeaders (never contains set-cookie), not raw
+    // response.headers -- response.headers.forEach yields one entry per
+    // Set-Cookie value (they aren't comma-combined), and replaying those
+    // through Headers.set in a loop would overwrite all but the last one,
+    // corrupting a session that @supabase/ssr split into multiple cookies.
+    pendingHeaders.forEach((value, key) => {
+      redirectResponse.headers.set(key, value);
+    });
     return redirectResponse;
   }
 
