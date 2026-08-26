@@ -87,3 +87,34 @@ test("still copies refreshed session cookies onto a redirect response", async ()
 
   expect(response.cookies.get("sb-access-token")?.value).toBe("refreshed");
 });
+
+test("copies every cookie onto a redirect response when a refreshed session is split across multiple cookies", async () => {
+  getUser.mockImplementation(async () => {
+    // @supabase/ssr splits an oversized session JWT into chunked cookies
+    // (e.g. sb-<ref>-auth-token.0, .1) written together in one setAll call.
+    cookieAdapter.setAll(
+      [
+        { name: "sb-auth-token.0", value: "chunk-0", options: {} },
+        { name: "sb-auth-token.1", value: "chunk-1", options: {} },
+      ],
+      NO_CACHE_HEADERS,
+    );
+    return {
+      data: { user: { id: "u1", email: "a@example.com" } },
+      error: null,
+    };
+  });
+
+  const response = await proxy(new NextRequest("http://localhost:3000/login"));
+
+  // NextResponse.cookies caches its parsed view at construction time and
+  // won't reflect a header mutation made after the fact, so assert on the
+  // real outgoing Set-Cookie header values instead of response.cookies.
+  const setCookieHeaders = response.headers.getSetCookie();
+  expect(setCookieHeaders.some((c) => c.startsWith("sb-auth-token.0="))).toBe(
+    true,
+  );
+  expect(setCookieHeaders.some((c) => c.startsWith("sb-auth-token.1="))).toBe(
+    true,
+  );
+});
