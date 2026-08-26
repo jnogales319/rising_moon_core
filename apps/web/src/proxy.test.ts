@@ -1,9 +1,7 @@
 import { NextRequest } from "next/server";
 import { afterEach, expect, test, vi } from "vitest";
-import {
-  AuthSessionMissingError,
-  type CookieOptions,
-} from "@supabase/supabase-js";
+import { AuthSessionMissingError } from "@supabase/supabase-js";
+import type { CookieOptions } from "@supabase/ssr";
 
 const getUser = vi.fn();
 let cookieAdapter: {
