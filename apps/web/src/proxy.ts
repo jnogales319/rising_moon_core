@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { getGuardRedirect } from "@/lib/route-guard";
 
@@ -69,10 +70,15 @@ export async function proxy(request: NextRequest) {
   }
   const isAuthenticated = !error && !!data.user;
 
-  const redirectPath = getGuardRedirect(
-    request.nextUrl.pathname,
-    isAuthenticated,
-  );
+  // A retryable error (network blip, Auth-server 5xx/timeout) doesn't mean
+  // the user is logged out, just that we couldn't verify right now — fail
+  // open and skip the guard rather than force a spurious redirect off a
+  // protected route. A definitive rejection (missing session, invalid
+  // token) still goes through the normal fail-closed check below.
+  const redirectPath =
+    error && isAuthRetryableFetchError(error)
+      ? null
+      : getGuardRedirect(request.nextUrl.pathname, isAuthenticated);
   if (redirectPath) {
     const redirectResponse = NextResponse.redirect(
       new URL(redirectPath, request.url),

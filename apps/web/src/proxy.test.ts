@@ -1,6 +1,10 @@
 import { NextRequest } from "next/server";
 import { afterEach, expect, test, vi } from "vitest";
-import { AuthSessionMissingError } from "@supabase/supabase-js";
+import {
+  AuthApiError,
+  AuthRetryableFetchError,
+  AuthSessionMissingError,
+} from "@supabase/supabase-js";
 import type { CookieOptions } from "@supabase/ssr";
 
 const getUser = vi.fn();
@@ -115,4 +119,45 @@ test("copies every cookie onto a redirect response when a refreshed session is s
   expect(setCookieHeaders.some((c) => c.startsWith("sb-auth-token.1="))).toBe(
     true,
   );
+});
+
+// Route guard treated any Auth-server error as logged out, causing
+// spurious redirects on transient failures.
+test("does not redirect off a protected route when the auth check fails transiently", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthRetryableFetchError("network error", 0),
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/dashboard"),
+  );
+
+  expect(response.headers.get("location")).toBeNull();
+});
+
+test("still redirects to /login when there is genuinely no session", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthSessionMissingError(),
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/dashboard"),
+  );
+
+  expect(response.headers.get("location")).toContain("/login");
+});
+
+test("still redirects to /login when the auth server rejects the session outright", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthApiError("invalid token", 401, "bad_jwt"),
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/dashboard"),
+  );
+
+  expect(response.headers.get("location")).toContain("/login");
 });
