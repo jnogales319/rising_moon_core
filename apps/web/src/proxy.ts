@@ -1,4 +1,5 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { getGuardRedirect } from "@/lib/route-guard";
 
@@ -69,10 +70,15 @@ export async function proxy(request: NextRequest) {
   }
   const isAuthenticated = !error && !!data.user;
 
-  const redirectPath = getGuardRedirect(
-    request.nextUrl.pathname,
-    isAuthenticated,
-  );
+  // A retryable error (network blip, Auth-server 5xx/timeout) doesn't mean
+  // the user is logged out, just that we couldn't verify right now — fail
+  // open and skip the guard rather than force a spurious redirect off a
+  // protected route. A definitive rejection (missing session, invalid
+  // token) still goes through the normal fail-closed check below.
+  const redirectPath =
+    error && isAuthRetryableFetchError(error)
+      ? null
+      : getGuardRedirect(request.nextUrl.pathname, isAuthenticated);
   if (redirectPath) {
     const redirectResponse = NextResponse.redirect(
       new URL(redirectPath, request.url),
@@ -94,6 +100,13 @@ export async function proxy(request: NextRequest) {
   // Forward the already-verified user onto the request so a Server Component
   // (e.g. SiteHeader) can read it via next/headers' headers() instead of
   // making its own getUser() round trip to the Auth server for every render.
+  //
+  // Note this stays unset on a retryable error above, same as any other
+  // failed check: we have no verified user to forward, so SiteHeader will
+  // render logged-out until the next successful check. That's an accepted
+  // side effect of failing open on the redirect (the user isn't bounced off
+  // the page), not something to paper over by forwarding an unverified
+  // identity as if it were confirmed.
   const requestHeaders = new Headers(request.headers);
   if (isAuthenticated && data.user) {
     requestHeaders.set("x-supabase-user-id", data.user.id);
