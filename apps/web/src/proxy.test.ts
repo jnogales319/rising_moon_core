@@ -136,6 +136,24 @@ test("does not redirect off a protected route when the auth check fails transien
   expect(response.headers.get("location")).toBeNull();
 });
 
+test("does not forward an unverified identity when the auth check fails transiently", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthRetryableFetchError("network error", 0),
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/dashboard"),
+  );
+
+  // Failing open means the request isn't bounced off the page, but we still
+  // have no verified user to vouch for -- SiteHeader should render
+  // logged-out rather than trust an identity we couldn't confirm.
+  expect(
+    response.headers.get("x-middleware-request-x-supabase-user-id"),
+  ).toBeNull();
+});
+
 test("still redirects to /login when there is genuinely no session", async () => {
   getUser.mockResolvedValue({
     data: { user: null },

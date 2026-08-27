@@ -100,6 +100,13 @@ export async function proxy(request: NextRequest) {
   // Forward the already-verified user onto the request so a Server Component
   // (e.g. SiteHeader) can read it via next/headers' headers() instead of
   // making its own getUser() round trip to the Auth server for every render.
+  //
+  // Note this stays unset on a retryable error above, same as any other
+  // failed check: we have no verified user to forward, so SiteHeader will
+  // render logged-out until the next successful check. That's an accepted
+  // side effect of failing open on the redirect (the user isn't bounced off
+  // the page), not something to paper over by forwarding an unverified
+  // identity as if it were confirmed.
   const requestHeaders = new Headers(request.headers);
   if (isAuthenticated && data.user) {
     requestHeaders.set("x-supabase-user-id", data.user.id);
