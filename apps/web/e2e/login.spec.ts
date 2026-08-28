@@ -1,20 +1,11 @@
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { createClient } from "@supabase/supabase-js";
-import { test, expect, VALID_PASSWORD } from "./support/auth";
-
-function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY. Copy apps/web/.env.local.example to apps/web/.env.local and fill in values from `supabase status`.",
-    );
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey);
-}
+import {
+  test,
+  expect,
+  createAdminClient,
+  VALID_PASSWORD,
+} from "./support/auth";
 
 // Seeds a user directly via GoTrue's admin API rather than driving
 // /register + Mailpit — registration and confirmation are already covered
