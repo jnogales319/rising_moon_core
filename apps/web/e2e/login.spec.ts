@@ -117,6 +117,15 @@ test("links to the registration page", async ({ page }) => {
   await expect(page).toHaveURL(/\/register$/);
 });
 
+test("links to the reset-password page", async ({ page }) => {
+  await page.goto("/login");
+  await page
+    .getByRole("main")
+    .getByRole("link", { name: "Forgot your password?" })
+    .click();
+  await expect(page).toHaveURL(/\/reset-password$/);
+});
+
 test("login page has no automatically detectable accessibility issues", async ({
   page,
 }) => {

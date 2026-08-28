@@ -36,3 +36,19 @@ test("does not redirect an authenticated user on an unlisted public route", () =
 test("does not redirect an unauthenticated user on an unlisted public route", () => {
   expect(getGuardRedirect("/", false)).toBeNull();
 });
+
+test("redirects an authenticated user away from the reset-password route", () => {
+  expect(getGuardRedirect("/reset-password", true)).toBe("/dashboard");
+});
+
+test("does not redirect an unauthenticated user on the reset-password route", () => {
+  expect(getGuardRedirect("/reset-password", false)).toBeNull();
+});
+
+test("does not redirect an authenticated user on the reset-password confirm route", () => {
+  expect(getGuardRedirect("/reset-password/confirm", true)).toBeNull();
+});
+
+test("does not redirect an unauthenticated user on the reset-password confirm route", () => {
+  expect(getGuardRedirect("/reset-password/confirm", false)).toBeNull();
+});

@@ -84,3 +84,10 @@ test("links to the registration page", () => {
     "/register",
   );
 });
+
+test("links to the reset-password page", () => {
+  render(<Login />);
+  expect(
+    screen.getByRole("link", { name: "Forgot your password?" }),
+  ).toHaveAttribute("href", "/reset-password");
+});

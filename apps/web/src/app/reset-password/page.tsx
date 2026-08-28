@@ -1,41 +1,53 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/error-message";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
 
-export default function Login() {
-  const router = useRouter();
+export default function ResetPassword() {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setLoginError(null);
+    setRequestError(null);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setLoginError(error.message);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) {
+        setRequestError(error.message);
+        return;
+      }
+    } catch (err) {
+      setRequestError(getErrorMessage(err));
       return;
     }
 
-    router.push("/dashboard");
-    router.refresh();
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6 text-center">
+        <h1 className="font-display text-4xl font-semibold">
+          Check your email
+        </h1>
+        <p>Check your email for a link to reset your password.</p>
+      </main>
+    );
   }
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
-      <h1 className="font-display text-4xl font-semibold">Log in</h1>
+      <h1 className="font-display text-4xl font-semibold">
+        Reset your password
+      </h1>
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
@@ -52,39 +64,19 @@ export default function Login() {
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <label htmlFor="password">Password</label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className={inputClassName}
-          />
-        </div>
-
-        <Link
-          href="/reset-password"
-          className="text-sm underline hover:text-foreground"
-        >
-          Forgot your password?
-        </Link>
-
-        {loginError && <p className="text-sm text-danger">{loginError}</p>}
+        {requestError && <p className="text-sm text-danger">{requestError}</p>}
 
         <button
           type="submit"
           className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
         >
-          Log in
+          Send reset link
         </button>
       </form>
 
       <p className="text-sm text-muted">
-        Need an account?{" "}
-        <Link href="/register" className="underline hover:text-foreground">
-          Sign up
+        <Link href="/login" className="underline hover:text-foreground">
+          Back to log in
         </Link>
       </p>
     </main>
