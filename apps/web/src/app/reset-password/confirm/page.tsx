@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/error-message";
 import { markPasswordResetSuccess } from "@/lib/reset-password-notice";
+import DotPulseSpinner from "@/components/dot-pulse-spinner";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -15,9 +16,13 @@ export default function ResetPasswordConfirm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [mismatchError, setMismatchError] = useState<string | null>(null);
   const [updateError, setUpdateError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setUpdateError(null);
 
     if (password !== confirmPassword) {
@@ -25,16 +30,19 @@ export default function ResetPasswordConfirm() {
       return;
     }
     setMismatchError(null);
+    setIsSubmitting(true);
 
     const supabase = createClient();
     try {
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
         setUpdateError(error.message);
+        setIsSubmitting(false);
         return;
       }
     } catch (err) {
       setUpdateError(getErrorMessage(err));
+      setIsSubmitting(false);
       return;
     }
 
@@ -94,9 +102,11 @@ export default function ResetPasswordConfirm() {
 
         <button
           type="submit"
-          className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
+          disabled={isSubmitting}
+          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90 disabled:cursor-not-allowed"
         >
-          Set new password
+          {isSubmitting && <DotPulseSpinner />}
+          {isSubmitting ? "Setting new password…" : "Set new password"}
         </button>
       </form>
     </main>

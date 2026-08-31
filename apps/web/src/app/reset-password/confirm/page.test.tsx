@@ -54,7 +54,14 @@ function fillFields({
 }
 
 function submit() {
-  fireEvent.click(screen.getByRole("button", { name: "Set new password" }));
+  // Matches both labels: the button's accessible name swaps to "Setting
+  // new password…" once submitting, and this is re-run across multiple
+  // clicks in the double-submit tests below. Still scoped by name so a
+  // future second button on the page fails the query instead of this
+  // silently clicking the wrong one.
+  fireEvent.click(
+    screen.getByRole("button", { name: /^Set(ting)? new password/ }),
+  );
 }
 
 test("renders new password and confirm password fields", () => {
@@ -124,4 +131,87 @@ test("a thrown rejection shows a fallback error message and does not redirect", 
 
   expect(await screen.findByText("network down")).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
+});
+
+test("clicking submit multiple times while a request is in flight only calls updateUser once", async () => {
+  let resolveUpdate: (value: {
+    data: { user: object };
+    error: null;
+  }) => void = () => {};
+  updateUser.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      }),
+  );
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+  submit();
+  submit();
+
+  expect(updateUser).toHaveBeenCalledTimes(1);
+
+  resolveUpdate({ data: { user: {} }, error: null });
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("the submit button is disabled while the request is in flight", async () => {
+  let resolveUpdate: (value: {
+    data: { user: object };
+    error: null;
+  }) => void = () => {};
+  updateUser.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      }),
+  );
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+
+  expect(
+    screen.getByRole("button", { name: "Setting new password…" }),
+  ).toBeDisabled();
+
+  resolveUpdate({ data: { user: {} }, error: null });
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("shows the dot-pulse spinner and swaps the label while the request is in flight", async () => {
+  let resolveUpdate: (value: {
+    data: { user: object };
+    error: null;
+  }) => void = () => {};
+  updateUser.mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        resolveUpdate = resolve;
+      }),
+  );
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+
+  expect(screen.getByText("Setting new password…")).toBeInTheDocument();
+  expect(screen.queryByText("Set new password")).not.toBeInTheDocument();
+
+  resolveUpdate({ data: { user: {} }, error: null });
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("after an error the button is re-enabled so the user can retry", async () => {
+  updateUser.mockResolvedValue({
+    data: { user: null },
+    error: { name: "AuthApiError", message: "Auth session missing" },
+  });
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+
+  await screen.findByText("Auth session missing");
+  expect(
+    screen.getByRole("button", { name: "Set new password" }),
+  ).not.toBeDisabled();
 });
