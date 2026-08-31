@@ -3,6 +3,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { getErrorMessage } from "@/lib/error-message";
 
 const DEBOUNCE_MS = 500;
 const DISPLAY_NAME_STATUS_ID = "display-name-status";
@@ -86,9 +87,7 @@ export default function Register() {
       }
       available = result.data;
     } catch (err) {
-      setSignUpError(
-        err instanceof Error ? err.message : "Something went wrong.",
-      );
+      setSignUpError(getErrorMessage(err));
       return;
     }
 

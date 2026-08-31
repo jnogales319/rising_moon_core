@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { consumePasswordResetSuccess } from "@/lib/reset-password-notice";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -13,6 +14,22 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
+  const [showResetSuccess, setShowResetSuccess] = useState(false);
+
+  useEffect(() => {
+    // sessionStorage is only available client-side, so this can't be a
+    // lazy useState initializer without mismatching the server-rendered
+    // (storage-less) markup on hydration.
+    //
+    // consumePasswordResetSuccess() is single-use (it clears the flag on
+    // read), so only ever set state to true here. Strict Mode's dev-only
+    // double effect invocation would otherwise have its second, empty
+    // read stomp the first, successful one.
+    if (consumePasswordResetSuccess()) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setShowResetSuccess(true);
+    }
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -36,6 +53,11 @@ export default function Login() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-4 p-6">
       <h1 className="font-display text-4xl font-semibold">Log in</h1>
+      {showResetSuccess && (
+        <p role="status" className="text-sm text-success">
+          Your password has been reset. Please log in again.
+        </p>
+      )}
       <form
         onSubmit={handleSubmit}
         className="flex w-full max-w-sm flex-col gap-4"
@@ -63,6 +85,13 @@ export default function Login() {
             className={inputClassName}
           />
         </div>
+
+        <Link
+          href="/reset-password"
+          className="text-sm underline hover:text-foreground"
+        >
+          Forgot your password?
+        </Link>
 
         {loginError && <p className="text-sm text-danger">{loginError}</p>}
 
