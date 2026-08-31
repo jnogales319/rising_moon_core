@@ -12,6 +12,7 @@ const updateUser = vi.fn();
 const signOut = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
+const markPasswordResetSuccess = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -23,11 +24,16 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }));
 
+vi.mock("@/lib/reset-password-notice", () => ({
+  markPasswordResetSuccess: () => markPasswordResetSuccess(),
+}));
+
 beforeEach(() => {
   updateUser.mockReset();
   signOut.mockReset();
   push.mockReset();
   refresh.mockReset();
+  markPasswordResetSuccess.mockReset();
   signOut.mockResolvedValue({ error: null });
 });
 
@@ -81,6 +87,7 @@ test("a successful update calls updateUser, signs out, and redirects to login", 
   expect(updateUser).toHaveBeenCalledWith({ password: "Sup3r$ecret1" });
   expect(signOut).toHaveBeenCalled();
   expect(refresh).toHaveBeenCalled();
+  expect(markPasswordResetSuccess).toHaveBeenCalled();
 });
 
 test("a signOut rejection does not block the redirect to login", async () => {
@@ -106,6 +113,7 @@ test("a resolved error shows GoTrue's own message and does not redirect", async 
   expect(await screen.findByText("Auth session missing")).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
   expect(signOut).not.toHaveBeenCalled();
+  expect(markPasswordResetSuccess).not.toHaveBeenCalled();
 });
 
 test("a thrown rejection shows a fallback error message and does not redirect", async () => {

@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/error-message";
+import { markPasswordResetSuccess } from "@/lib/reset-password-notice";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -46,6 +47,7 @@ export default function ResetPasswordConfirm() {
       // ignore
     }
 
+    markPasswordResetSuccess();
     router.push("/login");
     router.refresh();
   }

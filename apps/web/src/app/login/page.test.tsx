@@ -1,3 +1,4 @@
+import { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import Login from "./page";
@@ -5,6 +6,7 @@ import Login from "./page";
 const signInWithPassword = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
+const consumePasswordResetSuccess = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -16,10 +18,16 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh }),
 }));
 
+vi.mock("@/lib/reset-password-notice", () => ({
+  consumePasswordResetSuccess: () => consumePasswordResetSuccess(),
+}));
+
 beforeEach(() => {
   signInWithPassword.mockReset();
   push.mockReset();
   refresh.mockReset();
+  consumePasswordResetSuccess.mockReset();
+  consumePasswordResetSuccess.mockReturnValue(false);
 });
 
 afterEach(() => {
@@ -90,4 +98,38 @@ test("links to the reset-password page", () => {
   expect(
     screen.getByRole("link", { name: "Forgot your password?" }),
   ).toHaveAttribute("href", "/reset-password");
+});
+
+test("shows a password reset success notice when one was just consumed", async () => {
+  consumePasswordResetSuccess.mockReturnValue(true);
+  render(<Login />);
+  expect(
+    await screen.findByText(
+      "Your password has been reset. Please log in again.",
+    ),
+  ).toBeInTheDocument();
+});
+
+test("the notice survives React Strict Mode's double effect invocation in dev", async () => {
+  // consumePasswordResetSuccess is single-use by design (sessionStorage is
+  // cleared on read), so Strict Mode's dev-only double-invoke of effects
+  // must not let the second, empty read stomp the first, successful one.
+  consumePasswordResetSuccess.mockReturnValueOnce(true).mockReturnValue(false);
+  render(
+    <StrictMode>
+      <Login />
+    </StrictMode>,
+  );
+  expect(
+    await screen.findByText(
+      "Your password has been reset. Please log in again.",
+    ),
+  ).toBeInTheDocument();
+});
+
+test("does not show the reset success notice on a plain visit", () => {
+  render(<Login />);
+  expect(
+    screen.queryByText("Your password has been reset. Please log in again."),
+  ).not.toBeInTheDocument();
 });
