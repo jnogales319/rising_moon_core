@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/error-message";
+import PendingButton from "@/components/pending-button";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -12,20 +13,27 @@ export default function ResetPassword() {
   const [email, setEmail] = useState("");
   const [requestError, setRequestError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setRequestError(null);
+    setIsSubmitting(true);
 
     const supabase = createClient();
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
       if (error) {
         setRequestError(error.message);
+        setIsSubmitting(false);
         return;
       }
     } catch (err) {
       setRequestError(getErrorMessage(err));
+      setIsSubmitting(false);
       return;
     }
 
@@ -66,12 +74,13 @@ export default function ResetPassword() {
 
         {requestError && <p className="text-sm text-danger">{requestError}</p>}
 
-        <button
+        <PendingButton
           type="submit"
+          pending={isSubmitting}
+          idleLabel="Send reset link"
+          pendingLabel="Sending reset link…"
           className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
-        >
-          Send reset link
-        </button>
+        />
       </form>
 
       <p className="text-sm text-muted">
