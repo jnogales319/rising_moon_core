@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/error-message";
+import PendingButton from "@/components/pending-button";
 
 const DEBOUNCE_MS = 500;
 const DISPLAY_NAME_STATUS_ID = "display-name-status";
@@ -31,6 +32,7 @@ export default function Register() {
   >(null);
   const [signUpError, setSignUpError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (!displayName) return;
@@ -66,6 +68,9 @@ export default function Register() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setSignUpError(null);
 
     if (password !== confirmPassword) {
@@ -73,6 +78,7 @@ export default function Register() {
       return;
     }
     setPasswordMismatchError(null);
+    setIsSubmitting(true);
 
     const supabase = createClient();
 
@@ -83,16 +89,19 @@ export default function Register() {
       });
       if (result.error) {
         setSignUpError(result.error.message);
+        setIsSubmitting(false);
         return;
       }
       available = result.data;
     } catch (err) {
       setSignUpError(getErrorMessage(err));
+      setIsSubmitting(false);
       return;
     }
 
     if (!available) {
       setCheck({ name: displayName, status: "taken" });
+      setIsSubmitting(false);
       return;
     }
     setCheck({ name: displayName, status: "available" });
@@ -114,6 +123,7 @@ export default function Register() {
           ? "That display name is taken."
           : error.message,
       );
+      setIsSubmitting(false);
       return;
     }
 
@@ -207,12 +217,13 @@ export default function Register() {
         )}
         {signUpError && <p className="text-sm text-danger">{signUpError}</p>}
 
-        <button
+        <PendingButton
           type="submit"
+          pending={isSubmitting}
+          idleLabel="Create account"
+          pendingLabel="Creating account…"
           className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
-        >
-          Create account
-        </button>
+        />
       </form>
 
       <p className="text-sm text-muted">

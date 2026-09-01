@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { deferred } from "@/test/deferred";
 import Register from "./page";
 
 const DEBOUNCE_MS = 500;
@@ -37,16 +38,6 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-// A promise the test controls the resolution of, for asserting on
-// intermediate ("in flight") states rather than only the final result.
-function deferred<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((res) => {
-    resolve = res;
-  });
-  return { promise, resolve };
-}
-
 function fillFields({
   displayName = "nightowl",
   email = "nightowl@example.com",
@@ -67,8 +58,15 @@ function fillFields({
   });
 }
 
+// Name matches both the idle "Create account" and the in-flight
+// "Creating account…" label, so it still finds the button across the
+// double-submit tests.
+function submitButton() {
+  return screen.getByRole("button", { name: /^Creat(e|ing) account/ });
+}
+
 function submit() {
-  fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+  fireEvent.click(submitButton());
 }
 
 test("renders display name, email, password, and confirm password fields", () => {
@@ -248,6 +246,116 @@ test("an availability-check rejection during the live debounced check clears the
   await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
 
   expect(screen.queryByText("Checking availability…")).not.toBeInTheDocument();
+});
+
+test("clicking create account multiple times while submit is in flight only runs the sign-up sequence once", async () => {
+  const check = deferred<{ data: boolean; error: null }>();
+  checkDisplayNameAvailable.mockReturnValue(check.promise);
+  signUp.mockResolvedValue({
+    data: { user: { id: "user-1" }, session: null },
+    error: null,
+  });
+  render(<Register />);
+  fillFields();
+
+  submit();
+  submit();
+  submit();
+
+  // The submit's authoritative availability re-check is inside the same
+  // in-flight window, so it fires once despite three clicks. (Asserted
+  // before any await, so the debounced live check hasn't elapsed yet.)
+  expect(checkDisplayNameAvailable).toHaveBeenCalledTimes(1);
+  expect(signUp).not.toHaveBeenCalled();
+
+  check.resolve({ data: true, error: null });
+
+  expect(
+    await screen.findByText(/check your email to confirm your account/i),
+  ).toBeInTheDocument();
+  expect(signUp).toHaveBeenCalledTimes(1);
+});
+
+test("the create account button is disabled while submit is in flight", async () => {
+  const check = deferred<{ data: boolean; error: null }>();
+  checkDisplayNameAvailable.mockReturnValue(check.promise);
+  signUp.mockResolvedValue({
+    data: { user: { id: "user-1" }, session: null },
+    error: null,
+  });
+  render(<Register />);
+  fillFields();
+  submit();
+
+  expect(
+    screen.getByRole("button", { name: "Creating account…" }),
+  ).toBeDisabled();
+
+  check.resolve({ data: true, error: null });
+  await screen.findByText(/check your email to confirm your account/i);
+});
+
+test("shows the in-flight indicator and swaps the label while submit is in flight", async () => {
+  const check = deferred<{ data: boolean; error: null }>();
+  checkDisplayNameAvailable.mockReturnValue(check.promise);
+  signUp.mockResolvedValue({
+    data: { user: { id: "user-1" }, session: null },
+    error: null,
+  });
+  const { container } = render(<Register />);
+  fillFields();
+  submit();
+
+  expect(screen.getByText("Creating account…")).toBeInTheDocument();
+  // scoped to the button — "Create account" is also the page heading
+  expect(
+    screen.queryByRole("button", { name: "Create account" }),
+  ).not.toBeInTheDocument();
+  expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
+
+  check.resolve({ data: true, error: null });
+  await screen.findByText(/check your email to confirm your account/i);
+});
+
+test("after a signUp error the button is re-enabled so the user can retry", async () => {
+  signUp.mockResolvedValue({
+    data: { user: null, session: null },
+    error: { name: "AuthApiError", message: "User already registered" },
+  });
+  render(<Register />);
+  fillFields();
+  submit();
+
+  await screen.findByText("User already registered");
+  expect(
+    screen.getByRole("button", { name: "Create account" }),
+  ).not.toBeDisabled();
+});
+
+test("after an availability-check error during submit the button is re-enabled", async () => {
+  checkDisplayNameAvailable.mockResolvedValue({
+    data: null,
+    error: { message: "Network error" },
+  });
+  render(<Register />);
+  fillFields();
+  submit();
+
+  await screen.findByText("Network error");
+  expect(
+    screen.getByRole("button", { name: "Create account" }),
+  ).not.toBeDisabled();
+});
+
+test("a password mismatch does not put the button into the in-flight state", async () => {
+  render(<Register />);
+  fillFields({ password: "Sup3r$ecret1", confirmPassword: "Different1$" });
+  submit();
+
+  await screen.findByText("Passwords do not match.");
+  const button = screen.getByRole("button", { name: "Create account" });
+  expect(button).not.toBeDisabled();
+  expect(screen.queryByText("Creating account…")).not.toBeInTheDocument();
 });
 
 test("links to the login page", () => {
