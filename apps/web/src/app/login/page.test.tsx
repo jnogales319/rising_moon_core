@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { deferred } from "@/test/deferred";
 import Login from "./page";
 
 const signInWithPassword = vi.fn();
@@ -34,7 +35,13 @@ afterEach(() => {
   cleanup();
 });
 
-function fillAndSubmit({
+// Name matches both the idle "Log in" and the in-flight "Logging in…"
+// label, so it still finds the button across the double-submit tests.
+function loginButton() {
+  return screen.getByRole("button", { name: /^Log(ging)? in/ });
+}
+
+function fillFields({
   email = "nightowl@example.com",
   password = "Sup3r$ecret1",
 } = {}) {
@@ -44,7 +51,11 @@ function fillAndSubmit({
   fireEvent.change(screen.getByLabelText("Password"), {
     target: { value: password },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Log in" }));
+}
+
+function fillAndSubmit(fields = {}) {
+  fillFields(fields);
+  fireEvent.click(loginButton());
 }
 
 test("renders email and password fields", () => {
@@ -83,6 +94,63 @@ test("a login error shows GoTrue's own message and does not redirect", async () 
   ).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
   expect(refresh).not.toHaveBeenCalled();
+});
+
+test("clicking log in multiple times while the request is in flight only calls signInWithPassword once", async () => {
+  const call = deferred<{ data: unknown; error: null }>();
+  signInWithPassword.mockReturnValue(call.promise);
+  render(<Login />);
+  fillFields();
+
+  fireEvent.click(loginButton());
+  fireEvent.click(loginButton());
+  fireEvent.click(loginButton());
+
+  expect(signInWithPassword).toHaveBeenCalledTimes(1);
+
+  call.resolve({ data: { user: {}, session: {} }, error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+});
+
+test("the submit button is disabled while the request is in flight", async () => {
+  const call = deferred<{ data: unknown; error: null }>();
+  signInWithPassword.mockReturnValue(call.promise);
+  render(<Login />);
+  fillAndSubmit();
+
+  expect(screen.getByRole("button", { name: "Logging in…" })).toBeDisabled();
+
+  call.resolve({ data: { user: {}, session: {} }, error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+});
+
+test("shows the in-flight indicator and swaps the label while the request is in flight", async () => {
+  const call = deferred<{ data: unknown; error: null }>();
+  signInWithPassword.mockReturnValue(call.promise);
+  const { container } = render(<Login />);
+  fillAndSubmit();
+
+  expect(screen.getByText("Logging in…")).toBeInTheDocument();
+  // scoped to the button — "Log in" is also the page heading
+  expect(
+    screen.queryByRole("button", { name: "Log in" }),
+  ).not.toBeInTheDocument();
+  expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
+
+  call.resolve({ data: { user: {}, session: {} }, error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard"));
+});
+
+test("after a login error the button is re-enabled so the user can retry", async () => {
+  signInWithPassword.mockResolvedValue({
+    data: { user: null, session: null },
+    error: { name: "AuthApiError", message: "Invalid login credentials" },
+  });
+  render(<Login />);
+  fillAndSubmit();
+
+  await screen.findByText("Invalid login credentials");
+  expect(screen.getByRole("button", { name: "Log in" })).not.toBeDisabled();
 });
 
 test("links to the registration page", () => {

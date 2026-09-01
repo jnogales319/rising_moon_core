@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { consumePasswordResetSuccess } from "@/lib/reset-password-notice";
+import PendingButton from "@/components/pending-button";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -15,6 +16,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showResetSuccess, setShowResetSuccess] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     // sessionStorage is only available client-side, so this can't be a
@@ -33,7 +35,11 @@ export default function Login() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
     setLoginError(null);
+    setIsSubmitting(true);
 
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithPassword({
@@ -43,6 +49,7 @@ export default function Login() {
 
     if (error) {
       setLoginError(error.message);
+      setIsSubmitting(false);
       return;
     }
 
@@ -95,12 +102,13 @@ export default function Login() {
 
         {loginError && <p className="text-sm text-danger">{loginError}</p>}
 
-        <button
+        <PendingButton
           type="submit"
+          pending={isSubmitting}
+          idleLabel="Log in"
+          pendingLabel="Logging in…"
           className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
-        >
-          Log in
-        </button>
+        />
       </form>
 
       <p className="text-sm text-muted">
