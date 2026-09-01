@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import PendingButton from "@/components/pending-button";
 
 export default function AuthNavLink({
   loggedIn,
@@ -33,14 +34,14 @@ export default function AuthNavLink({
     return (
       <span className="flex items-center gap-3">
         <span className="font-medium">{displayName}</span>
-        <button
+        <PendingButton
           type="button"
           onClick={handleLogout}
-          disabled={isLoggingOut}
-          className="cursor-pointer text-sm text-muted underline hover:text-foreground disabled:cursor-default disabled:opacity-60"
-        >
-          Log out
-        </button>
+          pending={isLoggingOut}
+          idleLabel="Log out"
+          pendingLabel="Logging out…"
+          className="cursor-pointer text-sm text-muted underline hover:text-foreground disabled:opacity-60"
+        />
       </span>
     );
   }

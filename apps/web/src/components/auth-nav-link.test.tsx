@@ -1,5 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { deferred } from "@/test/deferred";
 import AuthNavLink from "./auth-nav-link";
 
 const usePathname = vi.fn();
@@ -85,6 +86,24 @@ test("a rapid double-click only triggers one sign-out", async () => {
   expect(signOut).toHaveBeenCalledTimes(1);
   expect(push).toHaveBeenCalledTimes(1);
   expect(refresh).toHaveBeenCalledTimes(1);
+});
+
+test("shows the in-flight indicator and swaps the label while signing out", async () => {
+  const call = deferred<{ error: null }>();
+  signOut.mockReturnValue(call.promise);
+  usePathname.mockReturnValue("/");
+  const { container } = render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+
+  expect(screen.getByRole("button", { name: "Logging out…" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "Log out" }),
+  ).not.toBeInTheDocument();
+  expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
+
+  call.resolve({ error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
 });
 
 test("a signOut error is logged but does not block navigation", async () => {
