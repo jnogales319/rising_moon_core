@@ -14,6 +14,7 @@ export default defineConfig({
       exclude: [
         "src/**/*.d.ts",
         "src/**/*.{test,spec}.{ts,tsx}",
+        "src/test/**",
         "src/lib/supabase/**",
         "src/proxy.ts",
         "src/app/layout.tsx",
