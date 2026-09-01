@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/lib/error-message";
 import { markPasswordResetSuccess } from "@/lib/reset-password-notice";
-import DotPulseSpinner from "@/components/dot-pulse-spinner";
+import PendingButton from "@/components/pending-button";
 
 const inputClassName =
   "rounded-md border border-muted/40 px-3 py-2 text-base focus:border-accent focus:outline-none";
@@ -100,14 +100,13 @@ export default function ResetPasswordConfirm() {
         )}
         {updateError && <p className="text-sm text-danger">{updateError}</p>}
 
-        <button
+        <PendingButton
           type="submit"
-          disabled={isSubmitting}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90 disabled:cursor-not-allowed"
-        >
-          {isSubmitting && <DotPulseSpinner />}
-          {isSubmitting ? "Setting new password…" : "Set new password"}
-        </button>
+          pending={isSubmitting}
+          idleLabel="Set new password"
+          pendingLabel="Setting new password…"
+          className="rounded-md bg-accent-secondary px-4 py-2 font-medium text-background hover:bg-accent-secondary/90"
+        />
       </form>
     </main>
   );
