@@ -106,6 +106,50 @@ test("shows the in-flight indicator and swaps the label while signing out", asyn
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
 });
 
+test("the in-flight flag is cleared after logout so a later login shows 'Log out'", async () => {
+  signOut.mockResolvedValue({ error: null });
+  usePathname.mockReturnValue("/");
+  // The root layout keeps one instance mounted across navigations, so the
+  // same element re-renders as the user logs out and back in.
+  const { rerender } = render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+
+  rerender(<AuthNavLink loggedIn={false} displayName={null} />);
+  rerender(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  const button = screen.getByRole("button", { name: "Log out" });
+  expect(button).toBeEnabled();
+  expect(screen.queryByText("Logging out…")).not.toBeInTheDocument();
+});
+
+test("no logged-out control flashes between the logout redirect and the refresh", async () => {
+  signOut.mockResolvedValue({ error: null });
+  usePathname.mockReturnValue("/");
+  const { rerender } = render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+
+  // push() has landed: pathname is /login, but the server prop has not
+  // refreshed yet. The button must stay in its in-flight state, not fall
+  // back to a "Log in" link or an idle "Log out".
+  usePathname.mockReturnValue("/login");
+  rerender(<AuthNavLink loggedIn displayName="nightowl" />);
+  expect(
+    screen.getByRole("button", { name: "Logging out…" }),
+  ).toBeInTheDocument();
+
+  // refresh() lands: loggedIn flips false against the already-updated
+  // pathname, so the control settles straight to nothing.
+  rerender(<AuthNavLink loggedIn={false} displayName={null} />);
+  expect(screen.queryByRole("button")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: "Log in" }),
+  ).not.toBeInTheDocument();
+});
+
 test("a signOut error is logged but does not block navigation", async () => {
   const signOutError = new Error("network down");
   signOut.mockResolvedValue({ error: signOutError });
