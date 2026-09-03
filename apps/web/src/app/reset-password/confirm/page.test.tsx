@@ -13,6 +13,8 @@ const signOut = vi.fn();
 const push = vi.fn();
 const refresh = vi.fn();
 const markPasswordResetSuccess = vi.fn();
+const fetchMock = vi.fn();
+vi.stubGlobal("fetch", fetchMock);
 
 vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({
@@ -34,7 +36,9 @@ beforeEach(() => {
   push.mockReset();
   refresh.mockReset();
   markPasswordResetSuccess.mockReset();
+  fetchMock.mockReset();
   signOut.mockResolvedValue({ error: null });
+  fetchMock.mockResolvedValue({ ok: true });
 });
 
 afterEach(() => {
@@ -108,6 +112,29 @@ test("a signOut rejection does not block the redirect to login", async () => {
   expect(refresh).toHaveBeenCalled();
 });
 
+test("a successful update asks the server to clear the recovery marker", async () => {
+  updateUser.mockResolvedValue({ data: { user: {} }, error: null });
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+  expect(fetchMock).toHaveBeenCalledWith("/auth/recovery-complete", {
+    method: "POST",
+    keepalive: true,
+  });
+});
+
+test("a failed recovery-complete request does not block the redirect to login", async () => {
+  updateUser.mockResolvedValue({ data: { user: {} }, error: null });
+  fetchMock.mockRejectedValue(new Error("network down"));
+  render(<ResetPasswordConfirm />);
+  fillFields();
+  submit();
+
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
 test("a resolved error shows GoTrue's own message and does not redirect", async () => {
   updateUser.mockResolvedValue({
     data: { user: null },
@@ -120,6 +147,7 @@ test("a resolved error shows GoTrue's own message and does not redirect", async 
   expect(await screen.findByText("Auth session missing")).toBeInTheDocument();
   expect(push).not.toHaveBeenCalled();
   expect(signOut).not.toHaveBeenCalled();
+  expect(fetchMock).not.toHaveBeenCalled();
   expect(markPasswordResetSuccess).not.toHaveBeenCalled();
 });
 
