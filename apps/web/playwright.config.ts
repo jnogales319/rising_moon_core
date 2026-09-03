@@ -15,6 +15,14 @@ export default defineConfig({
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // `next start` runs in production mode, where the app has no dev fallback
+    // for RECOVERY_MARKER_SECRET — supply one for the e2e run so the recovery
+    // flow works without every contributor having to set it in .env.local.
+    // Playwright merges this over process.env, so a real value still wins.
+    env: {
+      RECOVERY_MARKER_SECRET:
+        process.env.RECOVERY_MARKER_SECRET ?? "e2e-recovery-marker-secret",
+    },
   },
   use: {
     baseURL: "http://localhost:3000",
