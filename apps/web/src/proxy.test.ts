@@ -24,8 +24,22 @@ vi.mock("@supabase/ssr", () => ({
 
 process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
+process.env.RECOVERY_MARKER_SECRET = "test-recovery-marker-secret";
 
 const { proxy } = await import("./proxy");
+const { signRecoveryMarker, RECOVERY_MARKER_MAX_AGE_MS } =
+  await import("./lib/recovery-marker");
+
+const CONFIRM_URL = "http://localhost:3000/reset-password/confirm";
+
+function confirmRequest(markerCookie?: string) {
+  return new NextRequest(
+    CONFIRM_URL,
+    markerCookie
+      ? { headers: { cookie: `rm_recovery=${markerCookie}` } }
+      : undefined,
+  );
+}
 
 const NO_CACHE_HEADERS = {
   "cache-control": "private, no-cache, no-store, max-age=0, must-revalidate",
@@ -176,6 +190,87 @@ test("still redirects to /login when the auth server rejects the session outrigh
   const response = await proxy(
     new NextRequest("http://localhost:3000/dashboard"),
   );
+
+  expect(response.headers.get("location")).toContain("/login");
+});
+
+test("lets a genuine recovery session reach the reset-password confirm page", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "u1", email: "a@example.com" } },
+    error: null,
+  });
+  const marker = await signRecoveryMarker(
+    "u1",
+    Date.now(),
+    "test-recovery-marker-secret",
+  );
+
+  const response = await proxy(confirmRequest(marker));
+
+  expect(response.headers.get("location")).toBeNull();
+});
+
+test("redirects an authenticated non-recovery session off the confirm page to the change-password page", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "u1", email: "a@example.com" } },
+    error: null,
+  });
+
+  const response = await proxy(confirmRequest());
+
+  expect(response.headers.get("location")).toContain("/account/password");
+});
+
+test("redirects off the confirm page when the recovery marker has expired", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "u1", email: "a@example.com" } },
+    error: null,
+  });
+  const stale = await signRecoveryMarker(
+    "u1",
+    Date.now() - (RECOVERY_MARKER_MAX_AGE_MS + 60_000),
+    "test-recovery-marker-secret",
+  );
+
+  const response = await proxy(confirmRequest(stale));
+
+  expect(response.headers.get("location")).toContain("/account/password");
+});
+
+test("redirects off the confirm page when the recovery marker belongs to another user", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "u1", email: "a@example.com" } },
+    error: null,
+  });
+  const otherUsersMarker = await signRecoveryMarker(
+    "someone-else",
+    Date.now(),
+    "test-recovery-marker-secret",
+  );
+
+  const response = await proxy(confirmRequest(otherUsersMarker));
+
+  expect(response.headers.get("location")).toContain("/account/password");
+});
+
+test("redirects an unauthenticated visitor off the confirm page to /login", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthSessionMissingError(),
+  });
+
+  const response = await proxy(confirmRequest());
+
+  expect(response.headers.get("location")).toContain("/login");
+});
+
+test("fails closed to /login on a transient auth error for the confirm page", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthRetryableFetchError("network error", 0),
+  });
+
+  const response = await proxy(confirmRequest());
 
   expect(response.headers.get("location")).toContain("/login");
 });
