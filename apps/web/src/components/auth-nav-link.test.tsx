@@ -29,6 +29,12 @@ afterEach(() => {
   cleanup();
 });
 
+// Opens the account dropdown by clicking its trigger — the display name
+// doubles as the trigger's accessible name.
+function openMenu() {
+  fireEvent.click(screen.getByRole("button", { name: "nightowl" }));
+}
+
 test("a logged-in user sees their display name instead of a link", () => {
   usePathname.mockReturnValue("/");
   render(<AuthNavLink loggedIn displayName="nightowl" />);
@@ -54,11 +60,62 @@ test("a logged-out visitor already on /login sees no link", () => {
   expect(screen.queryByRole("link")).not.toBeInTheDocument();
 });
 
-test("a logged-in user sees a log out button", () => {
+test("clicking the display name opens the menu with both items", () => {
   usePathname.mockReturnValue("/");
   render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+  const trigger = screen.getByRole("button", { name: "nightowl" });
+  expect(trigger).toHaveAttribute("aria-haspopup", "menu");
+  expect(trigger).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+  fireEvent.click(trigger);
+
+  expect(trigger).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("menu")).toBeInTheDocument();
+  expect(
+    screen.getByRole("menuitem", { name: "Manage account" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
+});
+
+test("falls back to a generic 'Account' label when displayName is null", () => {
+  // Reachable when the profile lookup errors/returns no row and there's no
+  // email header to fall back to either (see site-header.tsx) — loggedIn
+  // can still be true. The trigger and menu need a real accessible name
+  // rather than an empty one or a literal "null".
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName={null} />);
+
+  const trigger = screen.getByRole("button", { name: "Account" });
+  fireEvent.click(trigger);
+
+  expect(
+    screen.getByRole("menu", { name: "Account account menu" }),
+  ).toBeInTheDocument();
+});
+
+test("'Manage account' links to /account and closes the menu on selection", () => {
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  openMenu();
+  const manageAccount = screen.getByRole("menuitem", {
+    name: "Manage account",
+  });
+  expect(manageAccount).toHaveAttribute("href", "/account");
+
+  fireEvent.click(manageAccount);
+
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+});
+
+test("a logged-in user sees a log out menu item", () => {
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  openMenu();
+  expect(screen.getByRole("menuitem", { name: "Log out" })).toBeInTheDocument();
 });
 
 test("clicking log out signs out, then redirects and refreshes", async () => {
@@ -66,7 +123,8 @@ test("clicking log out signs out, then redirects and refreshes", async () => {
   usePathname.mockReturnValue("/");
   render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
 
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
   expect(signOut).toHaveBeenCalled();
@@ -78,9 +136,10 @@ test("a rapid double-click only triggers one sign-out", async () => {
   usePathname.mockReturnValue("/");
   render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  const button = screen.getByRole("button", { name: "Log out" });
-  fireEvent.click(button);
-  fireEvent.click(button);
+  openMenu();
+  const item = screen.getByRole("menuitem", { name: "Log out" });
+  fireEvent.click(item);
+  fireEvent.click(item);
 
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
   expect(signOut).toHaveBeenCalledTimes(1);
@@ -88,39 +147,98 @@ test("a rapid double-click only triggers one sign-out", async () => {
   expect(refresh).toHaveBeenCalledTimes(1);
 });
 
-test("shows the in-flight indicator and swaps the label while signing out", async () => {
+test("shows the in-flight indicator and swaps the label while signing out, without closing the menu", async () => {
   const call = deferred<{ error: null }>();
   signOut.mockReturnValue(call.promise);
   usePathname.mockReturnValue("/");
   const { container } = render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
 
-  expect(screen.getByRole("button", { name: "Logging out…" })).toBeDisabled();
+  expect(screen.getByRole("menuitem", { name: "Logging out…" })).toBeDisabled();
   expect(
-    screen.queryByRole("button", { name: "Log out" }),
+    screen.queryByRole("menuitem", { name: "Log out" }),
   ).not.toBeInTheDocument();
+  expect(screen.getByRole("menu")).toBeInTheDocument();
   expect(container.querySelector('[aria-hidden="true"]')).not.toBeNull();
 
   call.resolve({ error: null });
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
 });
 
-test("the in-flight flag is cleared after logout so a later login shows 'Log out'", async () => {
+test("clicking log out moves focus to the trigger before the item disables", async () => {
+  // Disabling a focused element force-blurs it to <body>; moving focus to
+  // the trigger first keeps it inside the still-open menu instead.
+  const call = deferred<{ error: null }>();
+  signOut.mockReturnValue(call.promise);
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "nightowl" }),
+  );
+
+  call.resolve({ error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("Escape does not close the menu while logging out", async () => {
+  const call = deferred<{ error: null }>();
+  signOut.mockReturnValue(call.promise);
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
+
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.getByRole("menu")).toBeInTheDocument();
+
+  call.resolve({ error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("an outside click does not close the menu while logging out", async () => {
+  const call = deferred<{ error: null }>();
+  signOut.mockReturnValue(call.promise);
+  usePathname.mockReturnValue("/");
+  render(<AuthNavLink loggedIn displayName="nightowl" />);
+
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
+
+  fireEvent.mouseDown(document.body);
+  expect(screen.getByRole("menu")).toBeInTheDocument();
+
+  call.resolve({ error: null });
+  await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
+});
+
+test("the in-flight flag and open menu are cleared after logout, so a later login shows a fresh, closed menu", async () => {
   signOut.mockResolvedValue({ error: null });
   usePathname.mockReturnValue("/");
   // The root layout keeps one instance mounted across navigations, so the
   // same element re-renders as the user logs out and back in.
   const { rerender } = render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
 
   rerender(<AuthNavLink loggedIn={false} displayName={null} />);
   rerender(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  const button = screen.getByRole("button", { name: "Log out" });
-  expect(button).toBeEnabled();
+  // The dropdown must not reopen already-expanded from the logout that
+  // just completed.
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+  openMenu();
+  const item = screen.getByRole("menuitem", { name: "Log out" });
+  expect(item).toBeEnabled();
   expect(screen.queryByText("Logging out…")).not.toBeInTheDocument();
 });
 
@@ -129,16 +247,17 @@ test("no logged-out control flashes between the logout redirect and the refresh"
   usePathname.mockReturnValue("/");
   const { rerender } = render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
 
   // push() has landed: pathname is /login, but the server prop has not
-  // refreshed yet. The button must stay in its in-flight state, not fall
+  // refreshed yet. The menu must stay in its in-flight state, not fall
   // back to a "Log in" link or an idle "Log out".
   usePathname.mockReturnValue("/login");
   rerender(<AuthNavLink loggedIn displayName="nightowl" />);
   expect(
-    screen.getByRole("button", { name: "Logging out…" }),
+    screen.getByRole("menuitem", { name: "Logging out…" }),
   ).toBeInTheDocument();
 
   // refresh() lands: loggedIn flips false against the already-updated
@@ -148,6 +267,7 @@ test("no logged-out control flashes between the logout redirect and the refresh"
   expect(
     screen.queryByRole("link", { name: "Log in" }),
   ).not.toBeInTheDocument();
+  expect(screen.queryByRole("menu")).not.toBeInTheDocument();
 });
 
 test("a signOut error is logged but does not block navigation", async () => {
@@ -157,7 +277,8 @@ test("a signOut error is logged but does not block navigation", async () => {
   usePathname.mockReturnValue("/");
   render(<AuthNavLink loggedIn displayName="nightowl" />);
 
-  fireEvent.click(screen.getByRole("button", { name: "Log out" }));
+  openMenu();
+  fireEvent.click(screen.getByRole("menuitem", { name: "Log out" }));
 
   await vi.waitFor(() => expect(push).toHaveBeenCalledWith("/login"));
   expect(refresh).toHaveBeenCalled();

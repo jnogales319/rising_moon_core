@@ -90,7 +90,7 @@ test("logged in, the header shows the display name and no login link", async ({
   await expect(header.getByRole("link", { name: "Log in" })).toHaveCount(0);
 });
 
-test("logged-in header has no automatically detectable accessibility issues", async ({
+test("logged-in header has no automatically detectable accessibility issues, closed or with the account menu open", async ({
   page,
   id,
 }) => {
@@ -99,8 +99,46 @@ test("logged-in header has no automatically detectable accessibility issues", as
   await seedUser({ email, displayName });
   await establishSessionViaMagicLink(page, email);
 
-  const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations).toEqual([]);
+  const closedResults = await new AxeBuilder({ page }).analyze();
+  expect(closedResults.violations).toEqual([]);
+
+  await page
+    .getByRole("banner")
+    .getByRole("button", { name: displayName })
+    .click();
+  await expect(page.getByRole("menu")).toBeVisible();
+
+  const openResults = await new AxeBuilder({ page }).analyze();
+  expect(openResults.violations).toEqual([]);
+});
+
+test("the account menu opens and closes with the keyboard", async ({
+  page,
+  id,
+}) => {
+  const email = `menukbd-${id}@example.com`;
+  const displayName = `MenuKbd-${id}`;
+  await seedUser({ email, displayName });
+  await establishSessionViaMagicLink(page, email);
+
+  const header = page.getByRole("banner");
+  const trigger = header.getByRole("button", { name: displayName });
+  await trigger.focus();
+
+  await page.keyboard.press("Enter");
+  await expect(header.getByRole("menu")).toBeVisible();
+
+  // A second Enter press toggles it closed again, via the same handler
+  // that handles a mouse click.
+  await page.keyboard.press("Enter");
+  await expect(header.getByRole("menu")).toHaveCount(0);
+
+  await page.keyboard.press("Enter");
+  await expect(header.getByRole("menu")).toBeVisible();
+
+  await page.keyboard.press("Escape");
+  await expect(header.getByRole("menu")).toHaveCount(0);
+  await expect(trigger).toBeFocused();
 });
 
 test("logging out clears the session, redirects to /login, and updates the header", async ({
@@ -113,7 +151,8 @@ test("logging out clears the session, redirects to /login, and updates the heade
   await establishSessionViaMagicLink(page, email);
 
   const header = page.getByRole("banner");
-  await header.getByRole("button", { name: "Log out" }).click();
+  await header.getByRole("button", { name: displayName }).click();
+  await header.getByRole("menuitem", { name: "Log out" }).click();
 
   await expect(page).toHaveURL(/\/login$/);
   await expect(header.getByText(displayName)).toHaveCount(0);
