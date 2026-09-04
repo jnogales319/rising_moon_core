@@ -132,6 +132,25 @@ test("an already-authenticated visit to /reset-password redirects to the dashboa
   await expect(page).toHaveURL(/\/dashboard$/);
 });
 
+test("an authenticated non-recovery session visiting the confirm page is redirected to the change-password page", async ({
+  page,
+  id,
+}) => {
+  const email = `confirmguard-${id}@example.com`;
+  await seedUser({ email });
+  await establishSessionViaMagicLink(page, email);
+
+  await page.goto("/reset-password/confirm");
+  await expect(page).toHaveURL(/\/account\/password$/);
+});
+
+test("a logged-out visitor to the confirm page is redirected to login", async ({
+  page,
+}) => {
+  await page.goto("/reset-password/confirm");
+  await expect(page).toHaveURL(/\/login$/);
+});
+
 test("a bogus recovery token_hash redirects to the confirmation error page", async ({
   page,
 }) => {

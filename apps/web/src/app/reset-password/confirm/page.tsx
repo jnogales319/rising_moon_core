@@ -46,6 +46,19 @@ export default function ResetPasswordConfirm() {
       return;
     }
 
+    // Invalidate the recovery marker now that it has served its purpose, so a
+    // stale cookie can't be replayed to skip the current-password check on a
+    // later visit. Fire-and-forget with keepalive: a slow endpoint mustn't
+    // stall the redirect, and the request still lands if the page is torn
+    // down. Best-effort otherwise — the change already succeeded and the
+    // marker ages out on its own regardless.
+    void fetch("/auth/recovery-complete", {
+      method: "POST",
+      keepalive: true,
+    }).catch(() => {
+      // ignore
+    });
+
     // Avoids leaving a live recovery session in the browser once the
     // password has been changed. Best-effort: the password change already
     // succeeded, so a failed sign-out shouldn't block the redirect.

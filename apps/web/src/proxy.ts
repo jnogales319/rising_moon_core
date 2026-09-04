@@ -1,7 +1,15 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { isAuthRetryableFetchError } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { getGuardRedirect } from "@/lib/route-guard";
+import {
+  getGuardRedirect,
+  isResetPasswordConfirmPath,
+} from "@/lib/route-guard";
+import {
+  getRecoveryMarkerSecret,
+  RECOVERY_MARKER_COOKIE,
+  verifyRecoveryMarker,
+} from "@/lib/recovery-marker";
 
 export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -70,15 +78,41 @@ export async function proxy(request: NextRequest) {
   }
   const isAuthenticated = !error && !!data.user;
 
+  const pathname = request.nextUrl.pathname;
+  const isRetryable = !!(error && isAuthRetryableFetchError(error));
+
   // A retryable error (network blip, Auth-server 5xx/timeout) doesn't mean
   // the user is logged out, just that we couldn't verify right now — fail
   // open and skip the guard rather than force a spurious redirect off a
   // protected route. A definitive rejection (missing session, invalid
   // token) still goes through the normal fail-closed check below.
-  const redirectPath =
-    error && isAuthRetryableFetchError(error)
-      ? null
-      : getGuardRedirect(request.nextUrl.pathname, isAuthenticated);
+  //
+  // The reset-password confirm page is the exception: it's security-critical
+  // and must fail *closed*, so a retryable error there still runs the guard
+  // (with no verified user, sending the visitor to /login).
+  let redirectPath: string | null;
+  if (isRetryable && !isResetPasswordConfirmPath(pathname)) {
+    redirectPath = null;
+  } else {
+    // Only a session that arrived from a recovery email carries a valid
+    // marker cookie bound to its own user id — see lib/recovery-marker.ts.
+    let hasRecoveryMarker = false;
+    if (isAuthenticated && data.user && isResetPasswordConfirmPath(pathname)) {
+      hasRecoveryMarker = await verifyRecoveryMarker(
+        request.cookies.get(RECOVERY_MARKER_COOKIE)?.value,
+        {
+          sub: data.user.id,
+          nowMs: Date.now(),
+          secret: getRecoveryMarkerSecret(),
+        },
+      );
+    }
+    redirectPath = getGuardRedirect(
+      pathname,
+      isAuthenticated,
+      hasRecoveryMarker,
+    );
+  }
   if (redirectPath) {
     const redirectResponse = NextResponse.redirect(
       new URL(redirectPath, request.url),
@@ -108,6 +142,14 @@ export async function proxy(request: NextRequest) {
   // the page), not something to paper over by forwarding an unverified
   // identity as if it were confirmed.
   const requestHeaders = new Headers(request.headers);
+  // These are a trusted channel from this proxy to Server Components
+  // (SiteHeader, /account/password) — a client must never be able to set them
+  // itself. Strip any inbound copy unconditionally, then re-add only the
+  // identity we just verified. Without the delete, a forged
+  // `x-supabase-user-id` on an unauthenticated request to a public route
+  // sails straight through `new Headers(request.headers)`.
+  requestHeaders.delete("x-supabase-user-id");
+  requestHeaders.delete("x-supabase-user-email");
   if (isAuthenticated && data.user) {
     requestHeaders.set("x-supabase-user-id", data.user.id);
     if (data.user.email) {
