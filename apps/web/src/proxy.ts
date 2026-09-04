@@ -142,6 +142,14 @@ export async function proxy(request: NextRequest) {
   // the page), not something to paper over by forwarding an unverified
   // identity as if it were confirmed.
   const requestHeaders = new Headers(request.headers);
+  // These are a trusted channel from this proxy to Server Components
+  // (SiteHeader, /account/password) — a client must never be able to set them
+  // itself. Strip any inbound copy unconditionally, then re-add only the
+  // identity we just verified. Without the delete, a forged
+  // `x-supabase-user-id` on an unauthenticated request to a public route
+  // sails straight through `new Headers(request.headers)`.
+  requestHeaders.delete("x-supabase-user-id");
+  requestHeaders.delete("x-supabase-user-email");
   if (isAuthenticated && data.user) {
     requestHeaders.set("x-supabase-user-id", data.user.id);
     if (data.user.email) {

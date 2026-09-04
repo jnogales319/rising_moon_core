@@ -168,6 +168,60 @@ test("does not forward an unverified identity when the auth check fails transien
   ).toBeNull();
 });
 
+test("forwards the verified identity to Server Components when authenticated", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "verified-id", email: "verified@example.com" } },
+    error: null,
+  });
+
+  const response = await proxy(new NextRequest("http://localhost:3000/"));
+
+  expect(response.headers.get("x-middleware-request-x-supabase-user-id")).toBe(
+    "verified-id",
+  );
+});
+
+test("strips a forged x-supabase-user identity header on an unauthenticated request", async () => {
+  getUser.mockResolvedValue({
+    data: { user: null },
+    error: new AuthSessionMissingError(),
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/", {
+      headers: {
+        "x-supabase-user-id": "attacker-supplied",
+        "x-supabase-user-email": "victim@example.com",
+      },
+    }),
+  );
+
+  expect(response.headers.get("location")).toBeNull();
+  expect(
+    response.headers.get("x-middleware-request-x-supabase-user-id"),
+  ).toBeNull();
+  expect(
+    response.headers.get("x-middleware-request-x-supabase-user-email"),
+  ).toBeNull();
+});
+
+test("does not let a forged identity header override the verified user", async () => {
+  getUser.mockResolvedValue({
+    data: { user: { id: "verified-id", email: "verified@example.com" } },
+    error: null,
+  });
+
+  const response = await proxy(
+    new NextRequest("http://localhost:3000/", {
+      headers: { "x-supabase-user-id": "attacker-supplied" },
+    }),
+  );
+
+  expect(response.headers.get("x-middleware-request-x-supabase-user-id")).toBe(
+    "verified-id",
+  );
+});
+
 test("still redirects to /login when there is genuinely no session", async () => {
   getUser.mockResolvedValue({
     data: { user: null },
