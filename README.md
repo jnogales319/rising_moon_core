@@ -52,6 +52,7 @@ npm run lint --workspace=web
 npm run test --workspace=web       # Vitest (unit/component)
 npm run test:watch --workspace=web
 npm run test:e2e --workspace=web   # Playwright (requires: npx playwright install)
+npm run test:db                    # pgTAP (RLS/triggers/grants) — see CLAUDE.md's "Database behavior tests"
 ```
 
 ## License

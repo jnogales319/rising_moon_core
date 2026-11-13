@@ -25,6 +25,7 @@ npm run format:check                 # prettier --check, repo-wide
 npm run test --workspace=web         # vitest run (unit/component)
 npm run test:watch --workspace=web   # vitest, watch mode
 npm run test:e2e --workspace=web     # playwright test (requires `npx playwright install` first)
+npm run test:db                      # pgTAP (RLS/triggers/grants) against the local Supabase stack
 ```
 
 ### Local Supabase
@@ -38,6 +39,31 @@ npm run supabase:reset   # drops and recreates the local DB, replaying supabase/
 ```
 
 `supabase start` prints the local API URL, anon key, service role key, and Studio URL — copy `apps/web/.env.local.example` to `apps/web/.env.local` and fill those in. Migrations live in `supabase/migrations/`; auth config (password policy, etc.) is in `supabase/config.toml`.
+
+### Database behavior tests
+
+RLS policies, triggers, and Data API grants are verified with [pgTAP](https://pgtap.org/), not just manually against the live stack — a missing `service_role` grant once passed manual review and only surfaced there. Tests live in `supabase/tests/`, one file per concern, with a two-digit numeric prefix controlling run order (`supabase test db` runs all `supabase/tests/*.sql` via `pg_prove` in filename order): `00-helpers.sql` always runs first and sets up shared fixtures; later files aren't required to map one-to-one with migration files — group by table/concern instead, as `01-profiles-rls.sql` / `02-profiles-triggers.sql` / `03-profiles-grants.sql` / `04-profiles-display-name.sql` do for the two `profiles` migrations.
+
+`00-helpers.sql` defines a `tests` schema with role-impersonation fixtures, used like this:
+
+```sql
+select tests.create_supabase_user('someone@example.com', jsonb_build_object('display_name', 'Someone')) as user_id \gset
+select tests.authenticate_as('someone@example.com');       -- SET LOCAL ROLE authenticated, with a JWT sub claim so auth.uid() resolves
+select tests.authenticate_as_anon();                        -- SET LOCAL ROLE anon, no claims
+select tests.authenticate_as_service_role();                -- SET LOCAL ROLE service_role
+```
+
+`tests.create_supabase_user()` inserts a minimal-but-realistic row into `auth.users` and returns its id. That insert fires `on_auth_user_created`, so the seeded user already has a `public.profiles` row via `handle_new_user()` — don't also insert one yourself. Every test file but `00-helpers.sql` wraps its body in `BEGIN; ... ROLLBACK;` so seeded users and any mutations don't leak between files or across reruns; `00-helpers.sql` is deliberately unwrapped so its schema/functions/grants commit and are available to every later file in the same run.
+
+Running locally requires Docker (`npm run supabase:start` first), then:
+
+```bash
+npm run test:db
+```
+
+Unlike CI (where a fresh runner's `supabase start` always boots an empty, freshly-migrated container), `supabase test db` does not reset the database itself — it runs against whatever the local stack currently has. If your local stack has drifted from a clean migrated state, run `npm run supabase:reset` first.
+
+Adding coverage for a new migration: add a new numbered file (or a few, grouped by concern) reusing the `tests.*` helpers above; follow the pattern in the existing `profiles` files for role-impersonation and RLS/grant assertions. Keep DB-invariant assertions (policies, triggers, grants) here — user-visible flow coverage (e.g. register → confirm → profile appears) belongs in Playwright, not duplicated in pgTAP.
 
 Run a single test:
 
