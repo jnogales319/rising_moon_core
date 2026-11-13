@@ -52,3 +52,21 @@ jobs:
       - run: npm run test:e2e --workspace=web
       - if: always()
         run: npm run supabase:stop
+
+  db:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      # A fresh runner's `supabase start` boots an empty Postgres container
+      # and applies supabase/migrations/ from scratch -- that's the clean
+      # slate pgTAP needs to catch migration regressions, with no explicit
+      # `db reset` step required.
+      - run: npm run supabase:start
+      - run: npm run test:db
+      - if: always()
+        run: npm run supabase:stop
