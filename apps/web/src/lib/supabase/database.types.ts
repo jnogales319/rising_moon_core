@@ -34,6 +34,36 @@ export type Database = {
   };
   public: {
     Tables: {
+      character_sheet_templates: {
+        Row: {
+          created_at: string;
+          definition: Json;
+          id: string;
+          is_default: boolean;
+          name: string;
+          owner_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          definition?: Json;
+          id?: string;
+          is_default?: boolean;
+          name: string;
+          owner_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          definition?: Json;
+          id?: string;
+          is_default?: boolean;
+          name?: string;
+          owner_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       profiles: {
         Row: {
           created_at: string;
